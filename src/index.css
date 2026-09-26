@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+/*
+  Fade progressif du flou du header : au lieu d'une bordure nette qui coupe
+  le blur d'un coup, ce masque fait disparaître le blur EN DOUCEUR sur les
+  derniers 30% de sa hauteur. C'est ce qui évite l'effet "ligne dure".
+*/
+.flou-degrade {
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+}

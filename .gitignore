@@ -1,0 +1,16 @@
+# Dépendances (se réinstallent avec npm install / pip install, pas besoin de les versionner)
+node_modules/
+backend/venv/
+
+# Fichiers sensibles — NE JAMAIS pousser un .env sur GitHub (mots de passe, clés secrètes)
+.env
+backend/.env
+
+# Base de données locale (propre à chaque machine, ne se partage pas)
+backend/*.db
+
+# Build de production (généré à chaque déploiement, pas besoin de le versionner)
+dist/
+
+# Fichiers système
+.DS_Store
