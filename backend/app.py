@@ -153,7 +153,12 @@ def register_routes(app):
 
         if produit.quantite_stock > 0:
             db.session.add(
-                MouvementStock(produit_id=produit.id, type="nouveau_produit", quantite=produit.quantite_stock)
+                MouvementStock(
+                    produit_id=produit.id,
+                    produit_nom=produit.nom,
+                    type="nouveau_produit",
+                    quantite=produit.quantite_stock,
+                )
             )
 
         db.session.commit()
@@ -174,7 +179,12 @@ def register_routes(app):
 
         produit.quantite_stock += int(quantite)
         db.session.add(
-            MouvementStock(produit_id=produit.id, type="reapprovisionnement", quantite=int(quantite))
+            MouvementStock(
+                produit_id=produit.id,
+                produit_nom=produit.nom,
+                type="reapprovisionnement",
+                quantite=int(quantite),
+            )
         )
         db.session.commit()
         return jsonify(produit.to_dict())
@@ -185,11 +195,22 @@ def register_routes(app):
         """
         Supprime un produit du catalogue (ex: arrivage ponctuel terminé, plus jamais
         réapprovisionné). L'historique des ventes déjà faites reste intact — seul le
-        produit disparaît de la liste "Stock", il n'a plus besoin d'y traîner à 0.
+        produit disparaît de la liste "Stock".
+
+        Important : contrairement à SQLite (utilisé en dev local), PostgreSQL/Neon
+        applique STRICTEMENT les contraintes de clé étrangère. On détache donc
+        explicitement les références (LigneVente, MouvementStock) avant de supprimer
+        le produit, sinon la suppression échoue avec une erreur 500 en production.
         """
         produit = Produit.query.get(produit_id)
         if not produit:
             return jsonify({"erreur": "Produit introuvable"}), 404
+
+        # Détache la référence des lignes de vente passées, sans les supprimer :
+        # le nom déjà figé (produit_nom) reste affiché, seul le lien disparaît.
+        LigneVente.query.filter_by(produit_id=produit.id).update({"produit_id": None})
+        MouvementStock.query.filter_by(produit_id=produit.id).update({"produit_id": None})
+
         db.session.delete(produit)
         db.session.commit()
         return jsonify({"ok": True})
@@ -238,6 +259,11 @@ def register_routes(app):
             ventes_existantes = LigneVente.query.filter_by(produit_id=produit.id).count()
             if ventes_existantes > 0:
                 return jsonify({"erreur": "Des ventes existent déjà pour ce produit, annulation impossible"}), 400
+            # Détache toute autre référence restante avant de supprimer le produit
+            # (sécurité supplémentaire, même si en principe il n'y en a pas encore ici).
+            MouvementStock.query.filter(
+                MouvementStock.produit_id == produit.id, MouvementStock.id != mouvement.id
+            ).update({"produit_id": None})
             db.session.delete(mouvement)
             db.session.delete(produit)
             db.session.commit()
@@ -279,7 +305,12 @@ def register_routes(app):
             total += sous_total
 
             vente.lignes.append(
-                LigneVente(produit_id=produit.id, quantite=quantite, prix_unitaire=produit.prix_vente)
+                LigneVente(
+                    produit_id=produit.id,
+                    produit_nom=produit.nom,
+                    quantite=quantite,
+                    prix_unitaire=produit.prix_vente,
+                )
             )
 
         vente.total = total
@@ -290,6 +321,7 @@ def register_routes(app):
             db.session.add(
                 MouvementStock(
                     produit_id=ligne.produit_id,
+                    produit_nom=ligne.produit_nom,
                     vente_id=vente.id,
                     type="vente",
                     quantite=ligne.quantite,
@@ -302,7 +334,14 @@ def register_routes(app):
     @app.route("/api/ventes/<int:vente_id>", methods=["DELETE"])
     @connexion_requise
     def annuler_vente(vente_id):
-        """Annule une vente déjà enregistrée : remet le stock, marque les mouvements annulés."""
+        """
+        Annule une vente déjà enregistrée : remet le stock, marque les mouvements
+        liés comme annulés, puis supprime la vente.
+
+        Comme pour supprimer_produit : PostgreSQL refuse de supprimer une ligne
+        tant qu'une autre table pointe encore dessus. On détache donc vente_id
+        des mouvements AVANT de supprimer la vente, sinon 500 en production.
+        """
         vente = Vente.query.get(vente_id)
         if not vente:
             return jsonify({"erreur": "Vente introuvable"}), 404
@@ -311,7 +350,9 @@ def register_routes(app):
             if ligne.produit:
                 ligne.produit.quantite_stock += ligne.quantite
 
-        MouvementStock.query.filter_by(vente_id=vente.id).update({"annule": True})
+        MouvementStock.query.filter_by(vente_id=vente.id).update(
+            {"annule": True, "vente_id": None}
+        )
         db.session.delete(vente)  # supprime aussi les lignes (cascade)
         db.session.commit()
         return jsonify({"ok": True})

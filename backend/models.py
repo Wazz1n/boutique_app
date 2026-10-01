@@ -49,7 +49,12 @@ class LigneVente(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     vente_id = db.Column(db.Integer, db.ForeignKey("vente.id"), nullable=False)
-    produit_id = db.Column(db.Integer, db.ForeignKey("produit.id"), nullable=False)
+    # nullable=True : si le produit est supprimé plus tard, la ligne de vente reste
+    # (le CA de la vente ne bouge pas), seule la référence au produit disparaît.
+    produit_id = db.Column(db.Integer, db.ForeignKey("produit.id"), nullable=True)
+    # Nom du produit figé au moment de la vente — reste correct même si le
+    # produit est renommé ou supprimé ensuite (l'historique ne doit jamais changer).
+    produit_nom = db.Column(db.String(120), nullable=True)
     quantite = db.Column(db.Integer, nullable=False)
     prix_unitaire = db.Column(db.Float, nullable=False)
 
@@ -59,7 +64,7 @@ class LigneVente(db.Model):
         return {
             "id": self.id,
             "produitId": self.produit_id,
-            "produitNom": self.produit.nom if self.produit else None,
+            "produitNom": self.produit_nom or (self.produit.nom if self.produit else None),
             "quantite": self.quantite,
             "prixUnitaire": self.prix_unitaire,
         }
@@ -75,7 +80,10 @@ class MouvementStock(db.Model):
     __tablename__ = "mouvement_stock"
 
     id = db.Column(db.Integer, primary_key=True)
-    produit_id = db.Column(db.Integer, db.ForeignKey("produit.id"), nullable=False)
+    # nullable=True : permet de détacher la référence si le produit est supprimé,
+    # sans perdre la ligne d'historique elle-même (le nom reste affiché tel quel).
+    produit_id = db.Column(db.Integer, db.ForeignKey("produit.id"), nullable=True)
+    produit_nom = db.Column(db.String(120), nullable=True)  # figé au moment du mouvement
     vente_id = db.Column(db.Integer, db.ForeignKey("vente.id"), nullable=True)
     type = db.Column(db.String(30), nullable=False)  # "vente" | "reapprovisionnement" | "nouveau_produit"
     quantite = db.Column(db.Integer, nullable=False)
@@ -88,7 +96,7 @@ class MouvementStock(db.Model):
         return {
             "id": self.id,
             "produitId": self.produit_id,
-            "produitNom": self.produit.nom if self.produit else "(produit supprimé)",
+            "produitNom": self.produit_nom or (self.produit.nom if self.produit else "(produit supprimé)"),
             "venteId": self.vente_id,
             "type": self.type,
             "quantite": self.quantite,

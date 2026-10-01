@@ -22,6 +22,7 @@ export default function StockPage() {
   const [mouvements, setMouvements] = useState([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
+  const [recherche, setRecherche] = useState('')
 
   const charger = useCallback(() => {
     Promise.all([api.getProduits(), api.getMouvements()])
@@ -76,14 +77,31 @@ export default function StockPage() {
 
   if (chargement) return <p className="text-center text-rose-900/60 mt-10">Chargement...</p>
 
+  // Filtre simple et insensible à la casse sur le nom du produit.
+  const produitsFiltres = produits.filter((p) =>
+    p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
+  )
+
   return (
     <div className="flex flex-col gap-6">
       {/* Liste complète des produits, avec suppression et annulation rapide par ligne */}
       <GlassCard>
-        <p className="text-base font-medium text-rose-950 mb-3">Tous les produits</p>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-base font-medium text-rose-950">Tous les produits</p>
+          <span className="text-xs text-rose-900/50">{produitsFiltres.length} / {produits.length}</span>
+        </div>
+
+        <input
+          type="text"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher un produit..."
+          className="w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-sm text-rose-950 placeholder:text-rose-900/40 mb-3"
+        />
+
         {erreur && <p className="text-xs text-rose-600 mb-2">{erreur}</p>}
         <div className="divide-y divide-rose-900/10">
-          {produits.map((p) => {
+          {produitsFiltres.map((p) => {
             const dernier = dernierMouvementPour(p.id)
             return (
               <div key={p.id} className="flex items-center justify-between py-2.5 gap-3">
@@ -120,7 +138,11 @@ export default function StockPage() {
               </div>
             )
           })}
-          {produits.length === 0 && <p className="text-sm text-rose-900/50 py-2">Aucun produit pour l'instant.</p>}
+          {produitsFiltres.length === 0 && (
+            <p className="text-sm text-rose-900/50 py-2">
+              {recherche ? `Aucun produit ne correspond à "${recherche}".` : "Aucun produit pour l'instant."}
+            </p>
+          )}
         </div>
       </GlassCard>
 

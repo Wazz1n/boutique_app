@@ -26,28 +26,42 @@ const BACKDROP_FILTER = SUPPORTE_DISTORSION
 
 export default function GlassCard({ children, className = '' }) {
   const cardRef = useRef(null)
+  const frameRef = useRef(null)
   const [style, setStyle] = useState({})
   const [reflet, setReflet] = useState({ x: 50, y: 50, opacite: 0 })
 
   function gererMouvement(e) {
     const carte = cardRef.current
     if (!carte) return
-    const rect = carte.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width // 0 -> 1
-    const y = (e.clientY - rect.top) / rect.height
 
-    // Inclinaison max ±6deg, centrée sur le milieu de la carte
-    const rotationY = (x - 0.5) * 12
-    const rotationX = (0.5 - y) * 12
+    // On ne recalcule qu'une fois par frame d'écran (requestAnimationFrame) au lieu
+    // de à chaque pixel de mouvement — c'est ce qui donnait cette sensation saccadée
+    // et "buguée" sur les grandes cartes (comme la liste de stock avec plusieurs lignes).
+    if (frameRef.current) return
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null
+      const rect = carte.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / rect.width
+      const y = (e.clientY - rect.top) / rect.height
 
-    setStyle({
-      transform: `perspective(900px) rotateX(${rotationX}deg) rotateY(${rotationY}deg) scale3d(1.015,1.015,1.015)`,
+      // Inclinaison beaucoup plus subtile qu'avant (±4deg au lieu de ±12) —
+      // reste perceptible sans donner l'impression que la carte "part dans tous les sens".
+      const rotationY = (x - 0.5) * 4
+      const rotationX = (0.5 - y) * 4
+
+      setStyle({
+        transform: `perspective(1000px) rotateX(${rotationX}deg) rotateY(${rotationY}deg) scale3d(1.006,1.006,1.006)`,
+      })
+      setReflet({ x: x * 100, y: y * 100, opacite: 0.4 })
     })
-    setReflet({ x: x * 100, y: y * 100, opacite: 0.55 })
   }
 
   function gererSortie() {
-    setStyle({ transform: 'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)' })
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
+    setStyle({ transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)' })
     setReflet((r) => ({ ...r, opacite: 0 }))
   }
 
@@ -58,7 +72,7 @@ export default function GlassCard({ children, className = '' }) {
       onMouseLeave={gererSortie}
       style={{
         ...style,
-        transition: 'transform 400ms cubic-bezier(0.34,1.56,0.64,1)',
+        transition: 'transform 550ms cubic-bezier(0.22,1,0.36,1)',
         backdropFilter: BACKDROP_FILTER,
         WebkitBackdropFilter: 'blur(25px) saturate(180%)', // Safari ignore url() ici mais garde blur+saturate
         boxShadow:
