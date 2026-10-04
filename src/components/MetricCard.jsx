@@ -1,21 +1,31 @@
 import GlassCard from './GlassCard.jsx'
+import NombreAnime from './NombreAnime.jsx'
 
 // Une "carte métrique" = un chiffre important + son label + une note en dessous.
-// On la rend générique (props) pour l'utiliser 4 fois dans le dashboard
-// sans dupliquer le code à chaque fois.
 //
-// props:
-//  - label      : le texte au-dessus du chiffre (ex: "Chiffre d'affaires")
-//  - valeur     : le chiffre affiché en grand
-//  - note       : le petit texte en dessous (ex: "+18% vs mois dernier")
-//  - noteCouleur: classe Tailwind pour la couleur de la note (vert si positif, etc.)
+// props :
+//  - label       : texte au-dessus du chiffre (ex : "Chiffre d'affaires")
+//  - nombre      : si fourni, le chiffre s'anime de 0 jusqu'à cette valeur
+//  - suffixe     : petit texte à côté du nombre animé (ex : "Ariary")
+//  - valeur      : alternative à `nombre`, pour afficher un texte déjà formaté
+//  - note        : petit texte en dessous (ex : "+18% vs mois dernier")
+//  - noteCouleur : classe Tailwind de la couleur de la note
 
-export default function MetricCard({ label, valeur, note, noteCouleur = 'text-rose-600/70' }) {
+export default function MetricCard({
+  label,
+  nombre,
+  suffixe = '',
+  valeur,
+  note,
+  noteCouleur = 'text-rose-300/80',
+}) {
   return (
     <GlassCard>
-      <p className="text-sm text-rose-900/60">{label}</p>
-      <p className="text-2xl font-medium text-rose-950 mt-1">{valeur}</p>
-      {note && <p className={`text-xs mt-2 ${noteCouleur}`}>{note}</p>}
+      <p className="text-sm text-rose-200/70">{label}</p>
+      <p className="mt-1 text-2xl font-medium text-rose-50">
+        {nombre !== undefined ? <NombreAnime valeur={nombre} suffixe={suffixe} /> : valeur}
+      </p>
+      {note && <p className={`mt-2 text-xs ${noteCouleur}`}>{note}</p>}
     </GlassCard>
   )
 }

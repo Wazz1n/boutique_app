@@ -14,5 +14,3 @@ dist/
 
 # Fichiers système
 .DS_Store
-backend/__pycache__/
-__pycache__/

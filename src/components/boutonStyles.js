@@ -1,11 +1,15 @@
-// Classes Tailwind réutilisables pour l'effet "rebond" au survol/clic des boutons.
-// hover:scale-105 = grossit légèrement au survol
-// active:scale-95  = rétrécit légèrement au clic (retour "physique")
-// La courbe cubic-bezier(0.34,1.56,0.64,1) dépasse légèrement sa cible avant
-// de revenir, ce qui donne cette sensation de rebond plutôt qu'un mouvement plat.
+// Classes réutilisables pour tous les boutons de l'app.
+// L'effet de rebond (survol / clic), les transitions et le reflet "brille"
+// sont définis dans index.css (.bouton, .brille) pour rester au même endroit.
 
-const BASE = 'transition-transform duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-105 active:scale-95'
+const BASE = 'bouton text-sm px-4 py-2.5 rounded-xl'
 
-export const boutonPrimaire = `${BASE} bg-rose-400 hover:bg-rose-600 text-white text-sm px-4 py-2.5 rounded-xl shadow-md shadow-rose-300/40`
-export const boutonSecondaire = `${BASE} border border-rose-400 text-rose-600 text-sm px-4 py-2.5 rounded-xl`
-export const boutonRetour = `${BASE} border border-rose-900/20 text-rose-900/70 text-sm px-4 py-2.5 rounded-xl`
+export const boutonPrimaire = `${BASE} brille bg-rose-400 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/30`
+export const boutonSecondaire = `${BASE} border border-rose-400/60 text-rose-300 hover:bg-rose-400/10`
+export const boutonRetour = `${BASE} border border-white/15 text-rose-100/80 hover:bg-white/10`
+
+// Petits boutons des listes (stock, historique)
+export const boutonIcone =
+  'bouton inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-400/40 text-xs text-rose-300 hover:bg-white/10'
+export const boutonMini =
+  'bouton whitespace-nowrap rounded-full border border-rose-400/40 px-3 py-1.5 text-xs text-rose-300 hover:bg-white/10'

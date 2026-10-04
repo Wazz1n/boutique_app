@@ -2,17 +2,474 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+
+/* color-scheme: dark -> les éléments natifs (liste déroulante, suggestions de
+   saisie, barres de défilement, champs auto-remplis) passent en sombre eux
+   aussi, au lieu de s'afficher en blanc au milieu d'une interface sombre. */
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Réserve la place de la barre de défilement : la page ne "saute" pas de
+     quelques pixels quand une fenêtre s'ouvre et bloque le défilement. */
+  scrollbar-gutter: stable;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
+  background-color: #0c0608;
+  color: #fbeaf0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/*
-  Fade progressif du flou du header : au lieu d'une bordure nette qui coupe
-  le blur d'un coup, ce masque fait disparaître le blur EN DOUCEUR sur les
-  derniers 30% de sa hauteur. C'est ce qui évite l'effet "ligne dure".
-*/
+/* Barre de défilement fine et discrète, assortie au thème */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(237, 147, 177, 0.35) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(237, 147, 177, 0.3);
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(237, 147, 177, 0.55);
+}
+
+/* Champs de formulaire : focus lumineux et transitions douces */
+input,
+select,
+textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(237, 147, 177, 0.7);
+  box-shadow: 0 0 0 3px rgba(212, 83, 126, 0.28);
+}
+::placeholder {
+  color: rgba(237, 147, 177, 0.45);
+}
+/* Sans ça, les options d'une liste déroulante peuvent s'afficher blanc sur blanc */
+select option {
+  background-color: #1a0d13;
+  color: #fbeaf0;
+}
+/* Neutralise le fond jaune/blanc imposé par le navigateur sur les champs auto-remplis */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fbeaf0;
+  caret-color: #fbeaf0;
+  box-shadow: 0 0 0 1000px rgba(20, 8, 14, 0.92) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ==========================================================================
+   FLOU DÉGRADÉ DU HEADER
+   Le masque fait disparaître le flou EN DOUCEUR sur les derniers 30% de sa
+   hauteur, au lieu de le couper net sur une bordure.
+   ========================================================================== */
 .flou-degrade {
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
   mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+}
+
+/* ==========================================================================
+   ENTRÉES EN CASCADE
+   Chaque carte monte et apparaît avec un léger décalage par rapport à la
+   précédente. IMPORTANT : le fondu (opacity) est appliqué sur la carte de
+   verre elle-même (.verre) et JAMAIS sur un conteneur parent — un parent à
+   opacité < 1 casse le flou d'arrière-plan de tous les verres qu'il contient
+   (le flou ne "voit" plus le fond tant que l'animation tourne).
+   `backwards` : l'état de départ est appliqué pendant le délai, puis plus
+   aucune propriété ne reste appliquée une fois l'animation finie.
+   ========================================================================== */
+@keyframes monter {
+  from {
+    transform: translateY(18px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes apparaitre {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ligne-entree {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.cascade > * {
+  animation: monter 560ms cubic-bezier(0.22, 1, 0.36, 1) var(--delai, 0ms) backwards;
+}
+.cascade > :nth-child(1) {
+  --delai: calc(var(--base, 0ms) + 0ms);
+}
+.cascade > :nth-child(2) {
+  --delai: calc(var(--base, 0ms) + 80ms);
+}
+.cascade > :nth-child(3) {
+  --delai: calc(var(--base, 0ms) + 160ms);
+}
+.cascade > :nth-child(4) {
+  --delai: calc(var(--base, 0ms) + 240ms);
+}
+.cascade > :nth-child(5) {
+  --delai: calc(var(--base, 0ms) + 320ms);
+}
+.cascade > :nth-child(6) {
+  --delai: calc(var(--base, 0ms) + 400ms);
+}
+.cascade > :nth-child(7) {
+  --delai: calc(var(--base, 0ms) + 480ms);
+}
+.cascade > :nth-child(8) {
+  --delai: calc(var(--base, 0ms) + 560ms);
+}
+
+.verre {
+  animation: apparaitre 560ms ease-out var(--delai, 0ms) backwards;
+}
+
+/* Lignes de liste : glissent l'une après l'autre, juste après leur carte */
+.cascade-lignes > * {
+  animation: ligne-entree 420ms cubic-bezier(0.22, 1, 0.36, 1)
+    calc(var(--delai, 0ms) + 160ms + var(--ligne, 0) * 32ms) backwards;
+}
+
+/* ==========================================================================
+   FENÊTRES (MODALES)
+   Entrée ET sortie animées. Le fond assombri est un frère de la fenêtre (pas
+   son parent), pour la même raison que ci-dessus : ne jamais mettre
+   d'opacité sur un ancêtre d'un verre.
+   ========================================================================== */
+@keyframes modale-entree {
+  from {
+    transform: translateY(22px) scale(0.965);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes modale-sortie {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(14px) scale(0.97);
+  }
+}
+@keyframes overlay-entree {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes overlay-sortie {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes verre-sortie {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.entree-modale {
+  animation: modale-entree 380ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.sortie-modale {
+  animation: modale-sortie 190ms ease-in forwards;
+}
+.entree-overlay {
+  animation: overlay-entree 260ms ease-out backwards;
+}
+.sortie-overlay {
+  animation: overlay-sortie 190ms ease-in forwards;
+}
+.sortie-modale .verre {
+  animation: verre-sortie 190ms ease-in forwards;
+}
+
+/* ==========================================================================
+   SQUELETTE DE CHARGEMENT (reflet qui balaie de gauche à droite)
+   ========================================================================== */
+.squelette {
+  background-color: rgba(0, 0, 0, 0.3);
+  background-image: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: squelette 1.6s linear infinite;
+}
+@keyframes squelette {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* ==========================================================================
+   FOND VIVANT : trois grandes taches de couleur qui dérivent très lentement.
+   Elles donnent au flou du verre quelque chose de vivant à réfracter.
+   (transform uniquement = animation légère pour la carte graphique)
+   ========================================================================== */
+.orbe {
+  position: absolute;
+  border-radius: 9999px;
+  will-change: transform;
+}
+.orbe-1 {
+  width: 55vmax;
+  height: 55vmax;
+  left: -18vmax;
+  top: -22vmax;
+  background: radial-gradient(circle at center, rgba(212, 83, 126, 0.55) 0%, rgba(212, 83, 126, 0) 62%);
+  animation: derive-1 24s ease-in-out infinite alternate;
+}
+.orbe-2 {
+  width: 48vmax;
+  height: 48vmax;
+  right: -20vmax;
+  top: 12vh;
+  background: radial-gradient(circle at center, rgba(240, 153, 123, 0.45) 0%, rgba(240, 153, 123, 0) 62%);
+  animation: derive-2 30s ease-in-out infinite alternate;
+}
+.orbe-3 {
+  width: 52vmax;
+  height: 52vmax;
+  left: 8vw;
+  bottom: -28vmax;
+  background: radial-gradient(circle at center, rgba(237, 147, 177, 0.42) 0%, rgba(237, 147, 177, 0) 62%);
+  animation: derive-3 27s ease-in-out infinite alternate;
+}
+@keyframes derive-1 {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(22vmax, 14vmax, 0) scale(1.18);
+  }
+}
+@keyframes derive-2 {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(-24vmax, 10vmax, 0) scale(0.9);
+  }
+}
+@keyframes derive-3 {
+  from {
+    transform: translate3d(0, 0, 0) scale(0.95);
+  }
+  to {
+    transform: translate3d(20vmax, -16vmax, 0) scale(1.15);
+  }
+}
+
+/* ==========================================================================
+   BOUTONS : rebond au survol/clic + reflet qui passe de temps en temps
+   ========================================================================== */
+.bouton {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 200ms ease,
+    border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+}
+/* Le survol n'existe pas vraiment sur téléphone : on évite qu'il "colle" après un appui */
+@media (hover: hover) {
+  .bouton:hover:not(:disabled) {
+    transform: scale(1.05);
+  }
+}
+.bouton:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.bouton:disabled {
+  cursor: not-allowed;
+}
+
+.brille {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.brille::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: brillance 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes brillance {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* ==========================================================================
+   BARRE DE PROGRESSION (en haut de l'écran, pendant les requêtes réseau)
+   ========================================================================== */
+.barre-charge,
+.barre-fin {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #ed93b1, #d4537e, #f0997b);
+  box-shadow: 0 0 12px rgba(212, 83, 126, 0.9);
+}
+.barre-charge {
+  animation: barre-charge 7s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+.barre-fin {
+  animation: barre-fin 520ms ease-out forwards;
+}
+@keyframes barre-charge {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.88);
+  }
+}
+@keyframes barre-fin {
+  0% {
+    transform: scaleX(0.7);
+    opacity: 1;
+  }
+  55% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* ==========================================================================
+   NOTIFICATIONS (toasts)
+   ========================================================================== */
+@keyframes toast-entree {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toast-sortie {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+.toast-entree {
+  animation: toast-entree 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.toast-sortie {
+  animation: toast-sortie 260ms ease-in forwards;
+}
+
+/* ==========================================================================
+   MODE LÉGER : activé automatiquement (voir modeLeger.js) sur les machines
+   qui n'arrivent pas à tenir une animation fluide. On garde le même look,
+   mais avec un flou plus économe et sans le fond animé.
+   ========================================================================== */
+.mode-leger .orbe {
+  animation: none !important;
+}
+.mode-leger .verre {
+  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+  backdrop-filter: blur(24px) saturate(150%) !important;
+}
+.mode-leger .brille::after {
+  display: none;
+}
+
+/* ==========================================================================
+   ACCESSIBILITÉ : respecte le réglage "réduire les animations" du système
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   GRAPHIQUE : les barres poussent depuis le bas
+   ========================================================================== */
+@keyframes croissance {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.barre-croissance {
+  transform-origin: bottom center;
+  animation: croissance 800ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }

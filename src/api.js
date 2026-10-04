@@ -16,19 +16,54 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   (window.location.port === '5173' ? 'http://localhost:5000' : '')
 
-async function appelApi(chemin, options = {}) {
-  const reponse = await fetch(`${API_URL}${chemin}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+// --- Suivi de l'activité réseau -------------------------------------------
+// Compte les requêtes en cours et prévient les composants abonnés (la barre de
+// progression en haut de l'écran s'en sert). Le compteur est remis à jour dans
+// un `finally` : même si une requête échoue, il redescend toujours.
+let requetesEnCours = 0
+const ecouteursReseau = new Set()
 
-  if (!reponse.ok) {
-    const erreur = await reponse.json().catch(() => ({}))
-    throw new Error(erreur.erreur || 'Une erreur est survenue')
+function signaler() {
+  ecouteursReseau.forEach((rappel) => rappel(requetesEnCours))
+}
+
+export function surActiviteReseau(rappel) {
+  ecouteursReseau.add(rappel)
+  return () => {
+    ecouteursReseau.delete(rappel)
   }
+}
 
-  return reponse.json()
+async function appelApi(chemin, options = {}) {
+  requetesEnCours += 1
+  signaler()
+  try {
+    let reponse
+    try {
+      reponse = await fetch(`${API_URL}${chemin}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      })
+    } catch {
+      // fetch ne rejette que si le serveur est injoignable (pas de réseau, serveur éteint...)
+      const erreurReseau = new Error('Connexion au serveur impossible. Vérifiez votre connexion internet.')
+      erreurReseau.status = 0
+      throw erreurReseau
+    }
+
+    if (!reponse.ok) {
+      const corps = await reponse.json().catch(() => ({}))
+      const erreur = new Error(corps.erreur || 'Une erreur est survenue')
+      erreur.status = reponse.status // permet à l'appelant de réagir (ex : 401 = session expirée)
+      throw erreur
+    }
+
+    return await reponse.json()
+  } finally {
+    requetesEnCours -= 1
+    signaler()
+  }
 }
 
 export const api = {
